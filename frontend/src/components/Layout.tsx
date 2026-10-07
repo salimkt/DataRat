@@ -21,7 +21,7 @@ import {
   CloudOff,
 } from 'lucide-react';
 import { useApp } from '../context';
-import { DEFAULT_API_BASE, getEnvApiBase, getStoredApiBase, setApiBase } from '../api';
+import { DEFAULT_API_BASE, getEnvApiBase, getStoredApiBase, llmLabel, setApiBase } from '../api';
 import { Spinner } from './ui';
 
 const NAV = [
@@ -77,7 +77,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
             {health && (
               <div className="engine-row muted small">
                 <Sparkles size={13} aria-hidden="true" />
-                <span>{health.llm ? 'Claude AI agents active' : 'Rule-based agents (no LLM key)'}</span>
+                <span>{health.llm ? `${llmLabel(health)} AI agents active` : 'Rule-based agents (no LLM key)'}</span>
               </div>
             )}
             {health?.version && <div className="muted small">API v{health.version}</div>}
@@ -217,7 +217,7 @@ function SettingsDrawer() {
                   <Server size={16} aria-hidden="true" /> API version {health.version}
                 </div>
                 <div className="engine-row">
-                  <Sparkles size={16} aria-hidden="true" /> {health.llm ? 'LLM agents enabled (Claude)' : 'LLM disabled — deterministic rule-based agents'}
+                  <Sparkles size={16} aria-hidden="true" /> {health.llm ? `LLM agents enabled (${llmLabel(health)}${health.model ? ` · ${health.model}` : ''})` : 'LLM disabled — deterministic rule-based agents'}
                 </div>
               </>
             )}

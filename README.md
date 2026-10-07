@@ -4,6 +4,8 @@
 
 **Live demo:** https://salimkt.github.io/DataRat/ &nbsp;·&nbsp; **API:** https://datarat-api.onrender.com/docs
 
+![DataRat executive dashboard](docs/overview.png)
+
 > The API runs on Render's free tier, so the first request can take 30–50 s while the server wakes up. The UI shows a banner and retries automatically.
 
 ---
@@ -33,7 +35,7 @@ Business leaders don't want another BI tool to learn. They want answers like *"W
                                                     │           Narrator  (Claude or rules)  │
                                                     └────────────────────────────────────────┘
 ```
-- **LLM optional.** With `ANTHROPIC_API_KEY` set, the agents use Claude and validate its JSON output against a schema. Without a key, a deterministic rule-based engine answers common business questions: totals, top-N, trends, averages, counts, comparisons, growth, shares, correlations, derived metrics (conversion rate, ROAS, CTR, margin, AOV) and relative date filters.
+- **LLM optional, multi-provider.** With `GEMINI_API_KEY` set the agents use **Google Gemini** (`gemini-3.8-flash` by default, override with `GEMINI_MODEL`). With `ANTHROPIC_API_KEY` set they use Claude. Model output is JSON-validated against a schema, and any failure falls back to the rules. Without a key, a deterministic rule-based engine answers common business questions: totals, top-N, trends, averages, counts, comparisons, growth, shares, correlations, derived metrics (conversion rate, ROAS, CTR, margin, AOV) and relative date filters.
 - **Safe by design.** Read-only SQL guard, DuckDB external file access disabled, upload and remote-fetch size limits, and blocking of private network addresses.
 
 ## Run locally
@@ -50,7 +52,7 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ## Deploy
 - **Frontend:** pushing to `main` runs `.github/workflows/deploy-pages.yml`, which deploys to GitHub Pages. Set the repo variable `VITE_API_URL` to point the UI at a different API.
-- **Backend:** in Render, go to **New → Blueprint**, pick this repo, and it reads `render.yaml`. You can optionally add `ANTHROPIC_API_KEY` to turn on the Claude-powered agents.
+- **Backend:** in Render, go to **New → Blueprint**, pick this repo, and it reads `render.yaml`. Add `GEMINI_API_KEY` (from https://aistudio.google.com/apikey) in the Render dashboard to turn on the Gemini-powered agents.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/salimkt/DataRat)
 

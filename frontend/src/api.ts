@@ -25,7 +25,13 @@ export interface Dataset {
 export interface Health {
   status: 'ok' | string;
   llm: boolean;
+  provider?: 'gemini' | 'anthropic' | null;
+  model?: string | null;
   version: string;
+}
+
+export function llmLabel(h: Health): string {
+  return h.provider === 'gemini' ? 'Gemini' : 'Claude';
 }
 
 export type FieldType = 'text' | 'password' | 'textarea' | 'select';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, FileText, Printer, RefreshCw, Sparkles } from 'lucide-react';
-import { api, type Brief as BriefT, type Dataset } from '../api';
+import { api, llmLabel, type Brief as BriefT, type Dataset } from '../api';
 import { useApp } from '../context';
 import { DatasetGate } from '../components/Gate';
 import { ErrorNote, Markdown, Skeleton, Spinner } from '../components/ui';
@@ -75,7 +75,7 @@ function BriefPage({ ds }: { ds: Dataset }) {
           <h2 className="page-title">Executive Brief</h2>
           <p className="muted">
             A one-page narrative of {ds.name}: headline KPIs, what changed, risks and recommended actions
-            {health ? (health.llm ? ' — written by Claude.' : ' — templated from automatic insights.') : '.'}
+            {health ? (health.llm ? ` — written by ${llmLabel(health)}.` : ' — templated from automatic insights.') : '.'}
           </p>
         </div>
         <div className="row gap-sm wrap">

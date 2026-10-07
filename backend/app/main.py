@@ -79,7 +79,8 @@ def root():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "llm": llm.llm_available(), "version": VERSION}
+    return {"status": "ok", "llm": llm.llm_available(), "provider": llm.provider(),
+            "model": llm.model_name() if llm.llm_available() else None, "version": VERSION}
 
 
 @app.get("/api/connectors")

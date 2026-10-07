@@ -12,6 +12,8 @@ import pandas as pd
 import pytest
 
 os.environ.pop("ANTHROPIC_API_KEY", None)
+for _k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "DATARAT_LLM_PROVIDER"):
+    os.environ.pop(_k, None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -25,7 +27,8 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def _no_llm(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    for k in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "DATARAT_LLM_PROVIDER"):
+        monkeypatch.delenv(k, raising=False)
     yield
 
 
@@ -556,3 +559,97 @@ def test_cors_headers():
     r = client.options("/api/health", headers={"Origin": "https://example.github.io",
                                                "Access-Control-Request-Method": "GET"})
     assert r.headers.get("access-control-allow-origin") in ("*", "https://example.github.io")
+
+
+# ------------------------------------------------------------------ gemini provider
+class _FakeResp:
+    def __init__(self, status, payload):
+        self.status_code = status
+        self._payload = payload
+        self.text = json.dumps(payload)
+
+    def json(self):
+        return self._payload
+
+
+def _gemini_ok(obj):
+    return _FakeResp(200, {"candidates": [{"finishReason": "STOP", "content": {"parts": [
+        {"text": "thinking...", "thought": True}, {"text": json.dumps(obj)}]}}]})
+
+
+def test_provider_selection(monkeypatch):
+    assert llm.provider() is None
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    assert llm.provider() == "anthropic"
+    monkeypatch.setenv("GEMINI_API_KEY", "g-test")
+    assert llm.provider() == "gemini"  # gemini preferred in auto mode
+    assert llm.model_name() == llm.DEFAULT_GEMINI_MODEL
+    monkeypatch.setenv("DATARAT_LLM_PROVIDER", "anthropic")
+    assert llm.provider() == "anthropic"
+    monkeypatch.delenv("GEMINI_API_KEY")
+    monkeypatch.setenv("DATARAT_LLM_PROVIDER", "gemini")
+    assert llm.provider() is None
+    monkeypatch.setenv("GOOGLE_API_KEY", "g-test")
+    assert llm.provider() == "gemini"
+    h = client.get("/api/health").json()
+    assert h["llm"] is True and h["provider"] == "gemini" and h["model"]
+
+
+def test_gemini_complete_json(monkeypatch):
+    import httpx
+    monkeypatch.setenv("GEMINI_API_KEY", "g-test")
+    calls = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        calls.append((url, json, headers))
+        return _gemini_ok({"intent": "total", "x": 1})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    out = llm.complete_json("sys", "user", required_keys=("intent",))
+    assert out == {"intent": "total", "x": 1}
+    url, body, headers = calls[0]
+    assert llm.DEFAULT_GEMINI_MODEL in url and headers["x-goog-api-key"] == "g-test"
+    assert body["generationConfig"]["responseMimeType"] == "application/json"
+    assert body["system_instruction"]["parts"][0]["text"] == "sys"
+
+
+def test_gemini_retries_without_thinking_config(monkeypatch):
+    import httpx
+    monkeypatch.setenv("GEMINI_API_KEY", "g-test")
+    bodies = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        bodies.append(dict(json["generationConfig"]))
+        if "thinkingConfig" in json["generationConfig"]:
+            return _FakeResp(400, {"error": {"message": "thinking_level is not supported"}})
+        return _gemini_ok({"intent": "x"})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert llm.complete_json("s", "u") == {"intent": "x"}
+    assert len(bodies) == 2 and "thinkingConfig" not in bodies[1]
+
+
+@pytest.mark.parametrize("resp", [
+    _FakeResp(403, {"error": {"message": "API key not valid"}}),
+    _FakeResp(200, {"candidates": [], "promptFeedback": {"blockReason": "SAFETY"}}),
+    _FakeResp(200, {"candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "{"}]}}]}),
+    _FakeResp(200, {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": "not json"}]}}]}),
+])
+def test_gemini_errors_raise_llmerror(monkeypatch, resp):
+    import httpx
+    monkeypatch.setenv("GEMINI_API_KEY", "g-test")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: resp)
+    with pytest.raises(llm.LLMError):
+        llm.complete_json("s", "u")
+
+
+def test_ask_falls_back_when_gemini_fails(monkeypatch):
+    import httpx
+    monkeypatch.setenv("GEMINI_API_KEY", "g-test")
+
+    def boom(*a, **k):
+        raise httpx.ConnectError("down")
+
+    monkeypatch.setattr(httpx, "post", boom)
+    r = client.post("/api/ask", json={"dataset_id": "sales", "question": "total revenue by region"})
+    assert r.status_code == 200 and r.json()["rows"]
