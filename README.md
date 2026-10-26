@@ -10,6 +10,18 @@
 
 ---
 
+## What's interesting here
+- **A four-agent pipeline with a self-correcting SQL step.** Planner → SQL Engineer → Analyst → Narrator. When a generated query fails, the database error is fed back to the SQL Engineer, which retries up to twice.
+- **The LLM is optional, never trusted.** Gemini or Claude output is validated against a JSON schema; on any failure, or with no API key, a deterministic rules engine answers instead. The demo works with no key at all.
+- **Defence in depth for user-supplied SQL and URLs.** A read-only guard allows a single `SELECT`/`WITH` statement with no file or I/O functions, DuckDB external file access is disabled and locked, uploads and remote fetches are size-capped, and connectors refuse private network addresses.
+- **Real statistics, not just charts.** Holt-Winters forecasts with a confidence band, rolling z-score anomaly detection, and automatic profiling (quality score, semantic column typing, correlations).
+- **122 backend tests** that run offline, with no API key and no network.
+
+## Tech stack
+- **Backend:** Python 3.11, FastAPI, DuckDB (in-memory), pandas, NumPy, statsmodels, SQLAlchemy; Gemini or Claude for the agents; deployed on Render
+- **Frontend:** React 18, TypeScript, Vite, Recharts, React Router; deployed on GitHub Pages via GitHub Actions
+- **Tests:** pytest
+
 ## Why
 Business leaders don't want another BI tool to learn. They want answers like *"Which region is driving the profit drop and what should we do?"* DataRat turns raw tables into a briefing for executives in seconds, and every number links back to the SQL that produced it.
 
@@ -39,16 +51,22 @@ Business leaders don't want another BI tool to learn. They want answers like *"W
 - **Safe by design.** Read-only SQL guard, DuckDB external file access disabled, upload and remote-fetch size limits, and blocking of private network addresses.
 
 ## Run locally
-```bash
-# backend
-cd backend && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && uvicorn app.main:app --reload --port 8000
-pytest -q          # 114 tests
+Requires Python 3.11 (the version Render uses) and Node 20+.
 
-# frontend
+```bash
+# backend: http://localhost:8000, API docs at /docs
+cd backend
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt pytest
+pytest -q                                   # 122 tests, offline
+uvicorn app.main:app --reload --port 8000
+
+# frontend: in a second terminal, from the repo root
 cd frontend && npm install
 VITE_API_URL=http://localhost:8000 npm run dev
 ```
+
+Set `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` before starting the backend to turn on the LLM agents; without either, the rules engine answers. See [`backend/README.md`](backend/README.md) for all settings.
 
 ## Deploy
 - **Frontend:** pushing to `main` runs `.github/workflows/deploy-pages.yml`, which deploys to GitHub Pages. Set the repo variable `VITE_API_URL` to point the UI at a different API.
