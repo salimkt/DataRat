@@ -12,7 +12,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000     # docs at http://localhost:8000/docs
 ```
 
-Tests: `pip install pytest && pytest -q`
+Tests: `pip install pytest && pytest -q` (122 tests, offline; no API key needed)
 
 ## Configuration
 
