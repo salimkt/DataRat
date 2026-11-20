@@ -178,6 +178,30 @@ def test_connect_csv_and_delete():
     assert client.get("/api/datasets/my_orders").status_code == 404
 
 
+@pytest.mark.parametrize("values, order_env, expected", [
+    (["01/02/2025", "03/04/2025"], None, ["2025-02-01", "2025-04-03"]),    # all ambiguous -> day-first default
+    (["01-02-2025", "03-04-2025"], None, ["2025-02-01", "2025-04-03"]),    # hyphens too
+    (["01/02/2025", "03/04/2025"], "mdy", ["2025-01-02", "2025-03-04"]),   # US setting for ambiguous files
+    (["13/01/2025", "05/02/2025"], "mdy", ["2025-01-13", "2025-02-05"]),   # a day > 12 proves day-first
+    (["01/13/2025", "02/05/2025"], None, ["2025-01-13", "2025-02-05"]),    # a month slot > 12 proves month-first
+])
+def test_numeric_dates_day_month_order(monkeypatch, values, order_env, expected):
+    from app.store import prepare_frame
+    if order_env:
+        monkeypatch.setenv("DATARAT_DATE_ORDER", order_env)
+    else:
+        monkeypatch.delenv("DATARAT_DATE_ORDER", raising=False)
+    out = prepare_frame(pd.DataFrame({"d": values, "v": [1, 2]}))
+    assert pd.api.types.is_datetime64_any_dtype(out["d"])
+    assert list(out["d"].dt.strftime("%Y-%m-%d")) == expected
+
+
+def test_numeric_dates_mixed_orders_stay_text():
+    from app.store import prepare_frame
+    out = prepare_frame(pd.DataFrame({"d": ["13/01/2025", "01/13/2025"], "v": [1, 2]}))
+    assert not pd.api.types.is_datetime64_any_dtype(out["d"])
+
+
 def test_connect_tsv_and_duplicate_ids():
     tsv = b"a\tb\n1\tx\n2\ty\n"
     r1 = _connect("csv", {"name": "tab data"}, {"file": ("t.tsv", tsv, "text/tab-separated-values")})

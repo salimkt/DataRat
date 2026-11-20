@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import os
 import re
 import threading
 from typing import Any
@@ -39,6 +40,33 @@ def _clean_column_names(cols: list[Any]) -> list[str]:
     return out
 
 
+_DMY_RE = r"^\s*(\d{1,2})[-/](\d{1,2})[-/](\d{4})\s*$"
+
+
+def _numeric_date_order(s: pd.Series) -> str | None:
+    """Decide whether 'nn/nn/yyyy' values are day-first or month-first.
+
+    Uses the whole column: a first part above 12 means day-first (31/01/2025), a second part above
+    12 means month-first (01/31/2025), both means the column is not one date format (None). When
+    every value is ambiguous (all parts <= 12) the DATARAT_DATE_ORDER setting decides: "dmy"
+    (default; India, UK, most of the world) or "mdy" (US).
+    """
+    parts = s.dropna().astype(str).str.extract(_DMY_RE)
+    parts = parts.dropna()
+    if parts.empty:
+        return None
+    first, second = parts[0].astype(int), parts[1].astype(int)
+    day_first, month_first = bool((first > 12).any()), bool((second > 12).any())
+    if day_first and month_first:
+        return None
+    if day_first:
+        return "dmy"
+    if month_first:
+        return "mdy"
+    order = os.environ.get("DATARAT_DATE_ORDER", "dmy").strip().lower()
+    return order if order in ("dmy", "mdy") else "dmy"
+
+
 def _maybe_parse_dates(df: pd.DataFrame) -> pd.DataFrame:
     for c in df.columns:
         s = df[c]
@@ -47,9 +75,17 @@ def _maybe_parse_dates(df: pd.DataFrame) -> pd.DataFrame:
             if sample.empty:
                 continue
             looks_date = sample.str.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}([ T]\d{1,2}:\d{2}(:\d{2})?(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$").mean() > 0.9
-            looks_date = looks_date or (
-                sample.str.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{4}$").mean() > 0.9
-            )
+            numeric_dmy = sample.str.match(_DMY_RE).mean() > 0.9
+            if numeric_dmy and not looks_date:
+                order = _numeric_date_order(s)
+                if order is None:
+                    continue
+                txt = s.astype("string").str.strip().str.replace("-", "/", regex=False)
+                fmt = "%d/%m/%Y" if order == "dmy" else "%m/%d/%Y"
+                parsed = pd.to_datetime(txt, format=fmt, errors="coerce")
+                if parsed.notna().sum() >= 0.9 * s.notna().sum():
+                    df[c] = parsed
+                continue
             if looks_date:
                 try:
                     parsed = pd.to_datetime(s, errors="coerce", utc=False)

@@ -13,6 +13,7 @@ Node is v18 locally → use Vite 5 (not 6/7). Python 3.10+ (Render uses 3.11).
 
 ## Core concepts
 - **Dataset**: a table loaded into an in-process DuckDB connection (one per server, in-memory).
+  Numeric `nn/nn/yyyy` dates are read day- or month-first from the column itself (a part > 12 decides); fully ambiguous columns follow `DATARAT_DATE_ORDER` (`dmy` default).
   Each dataset has `id` (slug, used as the DuckDB table name), `name`, `source` (connector type),
   `rows`, `columns: [{name, dtype, semantic}]` where semantic ∈ `metric|dimension|date|id|text`.
 - Server boots with 3 **sample datasets** preloaded (generated deterministically with numpy seed 42):

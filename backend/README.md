@@ -24,6 +24,7 @@ Tests: `pip install pytest && pytest -q` (122 tests, offline; no API key needed)
 | `DATARAT_DISABLE_LLM` | unset | `1` forces the rule engine |
 | `DATARAT_SQL_MAX_ROWS` | `1000` | Row cap for `/api/sql` |
 | `DATARAT_ALLOW_PRIVATE_URLS` | unset | `1` lets the url/rest_api connectors reach private IPs (local dev only) |
+| `DATARAT_DATE_ORDER` | `dmy` | how to read `nn/nn/yyyy` dates when every value is ambiguous (all parts <= 12): `dmy` or `mdy`. A day above 12 in the column decides automatically. |
 
 ## Layout
 
