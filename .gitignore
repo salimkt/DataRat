@@ -8,3 +8,4 @@ venv/
 .DS_Store
 .pytest_cache/
 *.duckdb
+backend/var/

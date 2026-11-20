@@ -84,6 +84,36 @@ Connector item shape:
 - `POST /api/brief` body `{dataset_id}` → `{title, generated_at, summary (markdown), sections:[{heading, body (markdown)}], kpis (same as insights.kpis)}` — an "Executive Brief" (LLM if available, else templated from insights).
 - `POST /api/sql` body `{dataset_id?, sql}` → `{columns, rows}` (read-only guard; all datasets queryable by table name).
 
+### Wholesale planner (`backend/app/wholesale/`, design in `docs/wholesale-forecasting.md`)
+- `POST /api/wholesale/demo` body `{seed?: int, n_buyers?: 20..200}` → `WholesaleReport`. Generates synthetic
+  Tally-style exports, trains (fast config), plans, and registers `wholesale_invoices`, `wholesale_po_plan`,
+  `wholesale_call_list`, `wholesale_forecast` as datasets.
+- `POST /api/wholesale/run` body `{invoices_dataset_id, items_dataset_id?, parties_dataset_id?, stock_dataset_id?,
+  open_pos_dataset_id?, erp?: "auto"|"tally"|"marg"|"vyapar"|"canonical"}` → `WholesaleReport` from connected datasets.
+  400 if the columns cannot be mapped or the history is too short; 404 for an unknown dataset.
+- `GET /api/wholesale/report` → latest `WholesaleReport` (404 before the first run).
+- `GET /api/wholesale/report.xlsx` → the same report as a workbook (Summary, PO Plan, Call List, Forecast,
+  Daily Forecast, Model Metrics, Data Quality).
+- `GET /api/wholesale/outbox` → `{mode:"dry_run", messages, payloads}`: WhatsApp template payloads; never sends.
+- `WholesaleReport`:
+  ```
+  {title, generated_at, highlights: string[],
+   summary:{as_of, items, items_to_order, urgent_items, expedite_items, po_value, buyers_to_contact, calls, whatsapp,
+            expected_order_value, upcoming_events:[{date, festival, in_days, commodities}], history:{from,to,lines,buyers,stockout_days_share}},
+   po_plan:[{sku, item_name, supplier, status:"URGENT"|"EXPEDITE"|"ORDER"|"CHECK STOCK"|"OK", order_packs, order_qty, pack_unit, unit,
+             on_hand, on_order, reorder_point, order_up_to, safety_stock, lead_time_days, stockout_in_days, next_order_date,
+             forecast_7d, forecast_15d, forecast_30d, est_po_value, forecast_method}],
+   call_list:[{rank, buyer_id, buyer_name, segment, area, phone, action:"Reorder reminder"|"Win-back call", channel:"Call"|"WhatsApp",
+               items, expected_value, max_probability, priority_score, why, check_stock, message}],
+   forecast:[{sku, item_name, commodity, unit, method, h7, h15, h30, daily:[{date,value,lower,upper}], history:[{date,value}]}],
+   metrics:{demand:{models:[{model, wape_7, bias_7, wape_15, bias_15, wape_30, bias_30, mase_daily}], ...},
+            reorder:{models:[{model, roc_auc, pr_auc, brier, precision_at_k, recall_at_k}], churn?, cold_start?, ...}},
+   data_quality:{erp, rows_in, duplicates_dropped, cancelled_dropped, returns, unknown_items, ...}, model:{backend, trained_through, ...},
+   datasets?: string[]}
+  ```
+- Frontend page **Wholesale** (`#/wholesale`): KPI tiles, item forecast chart with band, PO plan, outreach list,
+  backtest tables, "Run on synthetic data", "Use my data" (pick connected datasets) and Excel download.
+
 ## Frontend (React + Vite + TS, `base: '/DataRat/'`)
 - API base from `import.meta.env.VITE_API_URL` default `https://datarat-api.onrender.com`; settings drawer lets user override (stored in localStorage). Show a friendly "Waking up the analysis server (Render free tier, ~30-50s)…" state with retry.
 - Pages (hash router so GH Pages works): 

@@ -22,6 +22,7 @@ from .profiling import profile
 from .sqlguard import UnsafeSQLError, ensure_read_only
 from .store import DatasetNotFound, store
 from .utils import to_jsonable
+from .wholesale.api import router as wholesale_router
 
 VERSION = "1.0.0"
 log = logging.getLogger("datarat")
@@ -30,6 +31,7 @@ app = FastAPI(title="DataRat API", version=VERSION,
               description="AI decision intelligence: connect data, get insights, ask questions.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
                    allow_credentials=False)
+app.include_router(wholesale_router)
 
 
 def load_samples() -> None:

@@ -15,10 +15,11 @@
 - **The LLM is optional, never trusted.** Gemini or Claude output is validated against a JSON schema; on any failure, or with no API key, a deterministic rules engine answers instead. The demo works with no key at all.
 - **Defence in depth for user-supplied SQL and URLs.** A read-only guard allows a single `SELECT`/`WITH` statement with no file or I/O functions, DuckDB external file access is disabled and locked, uploads and remote fetches are size-capped, and connectors refuse private network addresses.
 - **Real statistics, not just charts.** Holt-Winters forecasts with a confidence band, rolling z-score anomaly detection, and automatic profiling (quality score, semantic column typing, correlations).
-- **122 backend tests** that run offline, with no API key and no network.
+- **Wholesale planner for staples traders.** From Tally / Marg / Vyapar exports: 7/15/30-day demand forecasts per item (global LightGBM, stockout-censored demand corrected), purchase-order quantities from a safety-stock min/max policy, and a ranked daily list of buyers to call or WhatsApp. Backtested against naive, Holt-Winters and Croston baselines. See [`docs/wholesale-forecasting.md`](docs/wholesale-forecasting.md).
+- **153 backend tests** that run offline, with no API key and no network.
 
 ## Tech stack
-- **Backend:** Python 3.11, FastAPI, DuckDB (in-memory), pandas, NumPy, statsmodels, SQLAlchemy; Gemini or Claude for the agents; deployed on Render
+- **Backend:** Python 3.11, FastAPI, DuckDB (in-memory), pandas, NumPy, statsmodels, LightGBM / scikit-learn, SQLAlchemy; Gemini or Claude for the agents; deployed on Render
 - **Frontend:** React 18, TypeScript, Vite, Recharts, React Router; deployed on GitHub Pages via GitHub Actions
 - **Tests:** pytest
 
@@ -35,6 +36,7 @@ Business leaders don't want another BI tool to learn. They want answers like *"W
 | 🤖 **Ask AI (multi-agent)** | Planner → SQL Engineer (self-correcting, up to 2 retries) → Analyst (stats and chart choice) → Narrator (executive summary, recommendations, follow-ups), shown as a live agent timeline |
 | 🧑‍💻 **SQL Lab** | Run read-only DuckDB SQL across all connected datasets, with chart toggle |
 | 📝 **Executive Brief** | One-click board-ready briefing you can print or export as Markdown |
+| 🏬 **Wholesale planner** | Item demand forecasts (7/15/30 days), purchase-order plan with safety stock, buyer reorder and churn list, Excel export, WhatsApp dry-run outbox |
 
 ## Architecture
 ```
@@ -58,7 +60,8 @@ Requires Python 3.11 (the version Render uses) and Node 20+.
 cd backend
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt pytest
-pytest -q                                   # 122 tests, offline
+pytest -q                                   # 153 tests, offline
+python -m app.wholesale demo                # wholesale planner on synthetic data
 uvicorn app.main:app --reload --port 8000
 
 # frontend: in a second terminal, from the repo root
@@ -75,7 +78,7 @@ Set `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` before starting the backend to turn 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/salimkt/DataRat)
 
 ## Skills demonstrated
-`SQL (DuckDB)` · `Python / pandas / NumPy` · `statsmodels time-series forecasting` · `anomaly detection` · `data quality profiling` · `KPI design` · `data visualization` · `ETL / data connectors` · `FastAPI` · `React + TypeScript` · `LLM multi-agent systems` · `CI/CD`
+`SQL (DuckDB)` · `Python / pandas / NumPy` · `statsmodels time-series forecasting` · `LightGBM demand forecasting` · `inventory optimisation` · `churn / propensity modelling` · `anomaly detection` · `data quality profiling` · `KPI design` · `data visualization` · `ETL / data connectors` · `FastAPI` · `React + TypeScript` · `LLM multi-agent systems` · `CI/CD`
 
 ---
 Built by **[Muhammed Salim K T](https://github.com/salimkt)**, AI/ML engineer focused on LLM systems, RAG, multi-agent orchestration and analytics.
