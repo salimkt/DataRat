@@ -15,6 +15,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  Warehouse,
   X,
   XCircle,
   Info,
@@ -31,6 +32,7 @@ const NAV = [
   { to: '/connect', label: 'Connect', icon: Plug },
   { to: '/sql', label: 'SQL Lab', icon: Code2 },
   { to: '/brief', label: 'Executive Brief', icon: FileText },
+  { to: '/wholesale', label: 'Wholesale', icon: Warehouse },
 ];
 
 export function Logo() {
@@ -262,6 +264,7 @@ const TITLES: Record<string, string> = {
   '/connect': 'Connect data',
   '/sql': 'SQL Lab',
   '/brief': 'Executive Brief',
+  '/wholesale': 'Wholesale planner',
 };
 
 export function Layout({ children }: { children: ReactNode }) {

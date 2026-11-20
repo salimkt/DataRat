@@ -2419,3 +2419,41 @@ textarea {
 .turn {
   scroll-margin-top: 76px;
 }
+
+/* =========================================================
+   Wholesale planner
+   ========================================================= */
+.ws-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.ws-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.data-table td.ws-wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: 280px;
+  max-width: 560px;
+}
+.ws-calls td {
+  vertical-align: top;
+}
+.ws-calls .badge {
+  margin-top: 4px;
+}
+.ws-check {
+  color: var(--warn, #b45309);
+  margin-top: 2px;
+}
+.ws-item-select {
+  width: auto;
+  min-width: 200px;
+}

@@ -193,6 +193,110 @@ export interface SqlResult {
   rows: unknown[][];
 }
 
+// ---------- Wholesale planner ----------
+
+export type PoStatus = 'URGENT' | 'EXPEDITE' | 'ORDER' | 'CHECK STOCK' | 'OK';
+
+export interface PoLine {
+  sku: string;
+  item_name: string;
+  commodity: string;
+  supplier: string;
+  unit: string;
+  pack_unit: string;
+  pack_size: number;
+  forecast_7d: number;
+  forecast_15d: number;
+  forecast_30d: number;
+  lead_time_days: number;
+  safety_stock: number;
+  reorder_point: number;
+  order_up_to: number;
+  on_hand: number | null;
+  on_order: number;
+  days_of_cover: number | null;
+  stockout_in_days: number | null;
+  status: PoStatus;
+  order_qty: number;
+  order_packs: number;
+  next_order_date: string | null;
+  est_po_value: number;
+  forecast_method: string;
+}
+
+export interface CallRow {
+  rank: number;
+  buyer_id: string;
+  buyer_name: string;
+  segment: string;
+  area: string;
+  phone: string;
+  action: 'Reorder reminder' | 'Win-back call';
+  channel: 'Call' | 'WhatsApp';
+  items: string;
+  expected_value: number;
+  max_probability: number;
+  priority_score: number;
+  why: string;
+  check_stock: string;
+  message: string;
+}
+
+export interface ItemForecast {
+  sku: string;
+  item_name: string;
+  commodity: string;
+  unit: string;
+  method: string;
+  h7: number;
+  h15: number;
+  h30: number;
+  daily: ForecastPoint[];
+  history: SeriesPoint[];
+}
+
+export type MetricRow = { model: string } & Record<string, number | string | null>;
+
+export interface WholesaleReport {
+  title: string;
+  generated_at: string;
+  summary: {
+    as_of: string;
+    business: string;
+    items: number;
+    items_to_order: number;
+    urgent_items: number;
+    expedite_items: number;
+    po_value: number;
+    buyers_to_contact: number;
+    calls: number;
+    whatsapp: number;
+    expected_order_value: number;
+    upcoming_events: { date: string; festival: string; in_days: number; commodities: string[] }[];
+    history: { from: string; to: string; lines: number; buyers: number; stockout_days_share: number };
+  };
+  highlights: string[];
+  po_plan: PoLine[];
+  call_list: CallRow[];
+  forecast: ItemForecast[];
+  metrics: {
+    demand?: { models: MetricRow[]; split_date: string; end_date: string; test_origins: number; evaluated_on: string; backend: string };
+    reorder?: { models: MetricRow[]; test_from: string; test_to: string; base_rate: number; k: number; churn?: Record<string, number | string> };
+  };
+  data_quality: Record<string, unknown>;
+  model: { backend?: string; trained_through?: string };
+  datasets?: string[];
+}
+
+export interface WholesaleRunBody {
+  invoices_dataset_id: string;
+  items_dataset_id?: string;
+  parties_dataset_id?: string;
+  stock_dataset_id?: string;
+  open_pos_dataset_id?: string;
+  erp?: string;
+}
+
 // ---------- Base URL ----------
 
 function clean(url: string): string {
@@ -309,4 +413,8 @@ export const api = {
   brief: (dataset_id: string) => request<Brief>('/api/brief', json('POST', { dataset_id }), 180_000),
   sql: (sql: string, dataset_id?: string) =>
     request<SqlResult>('/api/sql', json('POST', dataset_id ? { dataset_id, sql } : { sql }), 120_000),
+  wholesaleReport: () => request<WholesaleReport>('/api/wholesale/report'),
+  wholesaleDemo: (seed = 7) => request<WholesaleReport>('/api/wholesale/demo', json('POST', { seed }), 240_000),
+  wholesaleRun: (body: WholesaleRunBody) => request<WholesaleReport>('/api/wholesale/run', json('POST', body), 240_000),
+  wholesaleXlsxUrl: () => `${getApiBase()}/api/wholesale/report.xlsx`,
 };

@@ -6,6 +6,7 @@ import Datasets from './pages/Datasets';
 import Ask from './pages/Ask';
 import SqlLab from './pages/SqlLab';
 import Brief from './pages/Brief';
+import Wholesale from './pages/Wholesale';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/ask" element={<Ask />} />
         <Route path="/sql" element={<SqlLab />} />
         <Route path="/brief" element={<Brief />} />
+        <Route path="/wholesale" element={<Wholesale />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
